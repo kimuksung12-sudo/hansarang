@@ -6,7 +6,7 @@
     <meta name="description" content="케어포 엑셀 자료와 장기요양계획서를 대조하는 업무 지원 시스템의 로그인 화면" />
     <title>로그인 | 케어플랜 체크</title>
     <link rel="stylesheet" href="./css/style.css" />
-    <script src="./js/script.js" defer></script>
+    <script type="module" src="./js/script.js"></script>
   </head>
   <body>
     <main class="page-shell">
@@ -72,12 +72,12 @@
 
           <form id="loginForm" novalidate>
             <div class="field-group">
-              <label for="username">아이디</label>
+              <label for="username">직원 이메일 (로그인 아이디)</label>
               <div class="input-shell" id="usernameShell">
                 <span class="input-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M5 20V18.5C5 15.74 7.24 13.5 10 13.5H14C16.76 13.5 19 15.74 19 18.5V20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                 </span>
-                <input id="username" name="username" type="text" placeholder="아이디를 입력하세요" autocomplete="username" maxlength="80" aria-describedby="usernameError" required />
+                <input id="username" name="username" type="email" placeholder="발급받은 이메일 주소" autocomplete="username" inputmode="email" spellcheck="false" maxlength="254" aria-describedby="usernameError" required />
               </div>
               <p class="field-error" id="usernameError" aria-live="polite"></p>
             </div>
@@ -99,7 +99,7 @@
 
             <label class="remember-control" for="rememberUsername">
               <input type="checkbox" id="rememberUsername" name="rememberUsername" />
-              <span>아이디 기억하기</span>
+              <span>이메일 기억하기</span>
             </label>
 
             <button class="submit-button" id="submitButton" type="submit">
@@ -114,10 +114,10 @@
             <span aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5V16M12 7.5H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </span>
-            <p>현재는 <strong>로그인 화면 시연 버전</strong>입니다.<br />실제 로그인은 서버 인증 기능을 연결한 뒤 사용할 수 있습니다.</p>
+            <p>직원 계정은 관리자가 발급합니다.<br />Firebase 설정과 관리자 승인이 완료되어야 로그인할 수 있습니다.</p>
           </div>
         </div>
-        <footer class="login-footer">© 2026 한마음 · 케어플랜 체크 · 내부 업무 지원 시스템</footer>
+        <footer class="login-footer">© 2026 한마음 · 케어플랜 체크 · 직원 전용</footer>
       </section>
     </main>
   </body>
