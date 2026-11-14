@@ -226,3 +226,6 @@ h2 { margin: 13px 0 9px; font-size: 32px; letter-spacing: -.07em; font-weight: 8
 
 /* 엑셀에서 추출한 장기요양 필요내용 확인 */
 .need-preview{margin-top:16px;padding:14px 18px;border:1px solid #dbe8f0;border-radius:12px;background:#f8fbfc}.need-preview h3{font-size:15px;margin:0 0 10px}.need-preview ol{margin:0;padding-left:22px;max-height:260px;overflow:auto}.need-preview li{margin-bottom:6px;line-height:1.55;overflow-wrap:anywhere}
+
+/* 장기요양 필요내용별 제공 횟수 */
+.need-row {display:flex;gap:10px;align-items:center;flex-wrap:wrap}.need-row input:first-child{flex:2 1 310px;min-width:160px}.need-row .need-frequency{flex:0 1 160px;min-width:135px}.need-preview li{margin-bottom:7px}
