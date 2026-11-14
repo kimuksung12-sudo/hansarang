@@ -14,8 +14,8 @@ service cloud.firestore {
     match /carePlans/{planId} {
       allow get, list: if isAdmin();
       allow create: if isAdmin()
-        && request.resource.data.keys().hasAll(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','needDetails','weeklyCount','weeklyUnit','overallOpinion','createdBy','updatedBy','createdAt','updatedAt'])
-        && request.resource.data.keys().hasOnly(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','needDetails','weeklyCount','weeklyUnit','overallOpinion','createdBy','updatedBy','createdAt','updatedAt'])
+        && request.resource.data.keys().hasAll(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','needDetails','weeklyCount','weeklyUnit','overallOpinion','recommendedSchedule','weekdaySchedule','saturdaySchedule','createdBy','updatedBy','createdAt','updatedAt'])
+        && request.resource.data.keys().hasOnly(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','needDetails','weeklyCount','weeklyUnit','overallOpinion','recommendedSchedule','weekdaySchedule','saturdaySchedule','createdBy','updatedBy','createdAt','updatedAt'])
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.personName is string
@@ -27,17 +27,35 @@ service cloud.firestore {
         && request.resource.data.needs.size() <= 50
         && request.resource.data.needDetails is list
         && request.resource.data.needDetails.size() <= 50
+        && request.resource.data.recommendedSchedule is string
+        && request.resource.data.recommendedSchedule.size() <= 150
+        && request.resource.data.weekdaySchedule is string
+        && request.resource.data.weekdaySchedule.size() <= 150
+        && request.resource.data.saturdaySchedule is string
+        && request.resource.data.saturdaySchedule.size() <= 150
         && (request.resource.data.weeklyCount == null || (request.resource.data.weeklyCount is int && request.resource.data.weeklyCount >= 0 && request.resource.data.weeklyCount <= 99))
         && request.resource.data.weeklyUnit is string
-        && request.resource.data.overallOpinion is string;
+        && request.resource.data.overallOpinion is string
+        && request.resource.data.recommendedSchedule is string
+        && request.resource.data.recommendedSchedule.size() <= 150
+        && request.resource.data.weekdaySchedule is string
+        && request.resource.data.weekdaySchedule.size() <= 150
+        && request.resource.data.saturdaySchedule is string
+        && request.resource.data.saturdaySchedule.size() <= 150;
       allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','needDetails','weeklyCount','weeklyUnit','overallOpinion','updatedBy','updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','needDetails','weeklyCount','weeklyUnit','overallOpinion','recommendedSchedule','weekdaySchedule','saturdaySchedule','updatedBy','updatedAt'])
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.personName is string
         && request.resource.data.recognitionNumber is string
         && request.resource.data.needs is list
         && request.resource.data.needDetails is list
         && request.resource.data.needDetails.size() <= 50
+        && request.resource.data.recommendedSchedule is string
+        && request.resource.data.recommendedSchedule.size() <= 150
+        && request.resource.data.weekdaySchedule is string
+        && request.resource.data.weekdaySchedule.size() <= 150
+        && request.resource.data.saturdaySchedule is string
+        && request.resource.data.saturdaySchedule.size() <= 150
         && (request.resource.data.weeklyCount == null || (request.resource.data.weeklyCount is int && request.resource.data.weeklyCount >= 0 && request.resource.data.weeklyCount <= 99));
       allow delete: if isAdmin();
     }

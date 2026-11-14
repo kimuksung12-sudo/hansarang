@@ -189,12 +189,40 @@ function getOpinion(rows){
   }
   return result.join('\n').slice(0,5000);
 }
-function extractWeekly(opinion,rows){
-  const all=rows.map(row=>row.map(clean).filter(Boolean).join(' ')).join('\n');
-  const index=all.search(/개인별\s*장기요양이용계획서|종합\s*의견/);
-  const scope=index>=0?all.slice(index,index+2500):all;
-  const found=[...scope.matchAll(/주\s*(\d{1,2})\s*(회|일)/g)].map(m=>({value:+m[1],unit:m[2],context:scope.slice(Math.max(0,m.index-22),m.index+30)}));
-  return {weeklyCount:found.length===1?found[0].value:null, weeklyUnit:found.length===1?found[0].unit:'회', candidates:found.slice(0,12)};
+// '종합의견'의 개인별장기요양이용계획서 문장에서
+// 1번째 괄호=권장 시간, 2번째=평일 실제 수가, 3번째=토요일 실제 수가.
+// 괄호 뒤의 "10시간 미만" 같은 상한도 함께 보관합니다.
+export function extractSchedulesFromOpinion(opinion){
+  const text=clean(opinion).replace(/\s+/g,' ');
+  const anchor=/개인별\s*장기\s*요양\s*이용\s*계획서/.exec(text);
+  if(!anchor) return {
+    recommendedSchedule:'',weekdaySchedule:'',saturdaySchedule:'',
+    weeklyCount:null,weeklyUnit:'회',warnings:['개인별장기요양이용계획서 문구를 찾지 못했습니다.']
+  };
+  // 문장의 시작점을 표제어 이후로 한정해 다른 종합의견의 괄호가 섞이는 것을 방지합니다.
+  const scoped=text.slice(anchor.index+anchor[0].length,anchor.index+anchor[0].length+1400);
+  const found=[];
+  const pattern=/[（(]\s*(주\s*\d{1,2}\s*회[^()（）]{0,90}?)\s*[)）]\s*(\d{1,2}\s*시간\s*미만)?/g;
+  for(const match of scoped.matchAll(pattern)){
+    const inside=match[1].replace(/\s+/g,' ').trim();
+    if(!/주\s*\d{1,2}\s*회/.test(inside))continue;
+    const suffix=(match[2]||'').replace(/\s+/g,' ').trim();
+    found.push(`${inside}${suffix ? ' '+suffix : ''}`);
+  }
+  const warnings=[];
+  if(!found.length)warnings.push('종합의견에서 주당 횟수가 포함된 괄호를 찾지 못했습니다.');
+  if(found.length===1)warnings.push('평일 적용 수가를 확인하지 못했습니다.');
+  if(found.length>3)warnings.push('주당 횟수가 포함된 괄호가 4개 이상입니다. 첫 3개를 추출했으니 원문을 확인해 주세요.');
+  // 3번째가 없으면 토요일 수가를 가정하지 않습니다.
+  const count=found[0]?.match(/주\s*(\d{1,2})\s*회/);
+  return {
+    recommendedSchedule:found[0]||'',
+    weekdaySchedule:found[1]||'',
+    saturdaySchedule:found[2]||'',
+    weeklyCount:count?Number(count[1]):null,
+    weeklyUnit:'회',
+    warnings
+  };
 }
 export async function extractCarePlan(file){
   if(!/\.(xls|xlsx)$/i.test(file.name))throw new Error('xls 또는 xlsx 파일만 선택할 수 있습니다.');
@@ -239,8 +267,8 @@ export async function extractCarePlan(file){
   const needs=needResult.needs;
   const needDetails=needResult.needDetails;
   const overallOpinion=getOpinion(rows);
-  const weekly=extractWeekly(overallOpinion,rows);
-  const extracted={personName,recognitionNumber,careGrade,periodStart,periodEnd,needs,needDetails,overallOpinion,weeklyCount:weekly.weeklyCount,weeklyUnit:weekly.weeklyUnit};
+  const schedule=extractSchedulesFromOpinion(overallOpinion);
+  const extracted={personName,recognitionNumber,careGrade,periodStart,periodEnd,needs,needDetails,overallOpinion,weeklyCount:schedule.weeklyCount,weeklyUnit:schedule.weeklyUnit,recommendedSchedule:schedule.recommendedSchedule,weekdaySchedule:schedule.weekdaySchedule,saturdaySchedule:schedule.saturdaySchedule};
   const warnings=[];
   for(const [key,label] of [['personName','성명'],['recognitionNumber','장기요양인정번호'],['careGrade','등급'],['periodStart','제공계획서 적용 시작일'],['periodEnd','제공계획서 적용 종료일']])if(!extracted[key])warnings.push(`${label}을(를) 확실히 찾지 못했습니다.`);
   if(!needResult.foundHeader)warnings.push('장기요양 필요내용 열 제목을 찾지 못해 임의로 다른 열을 가져오지 않았습니다.');
@@ -253,6 +281,6 @@ export async function extractCarePlan(file){
     warnings.push(`횟수 표기 검토: ${needResult.rawUnrecognized.map(x=>`${x.need} → ${x.rawFreq}`).join(' / ')}`);
   }
   if(needResult.truncated)warnings.push('장기요양 필요내용이 50건을 넘어 일부가 제외되었습니다.');
-  if(weekly.candidates.length!==1)warnings.push(weekly.candidates.length?'주당 횟수가 여러 번 발견되어 자동 선택하지 않았습니다.':'주당 횟수를 찾지 못했습니다.');
-  return {extracted,warnings,candidates:weekly.candidates,sheetNames:wb.SheetNames};
+  warnings.push(...schedule.warnings);
+  return {extracted,warnings,candidates:[],sheetNames:wb.SheetNames};
 }

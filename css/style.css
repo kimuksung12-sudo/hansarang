@@ -231,3 +231,5 @@ h2 { margin: 13px 0 9px; font-size: 32px; letter-spacing: -.07em; font-weight: 8
 .need-row {display:flex;gap:10px;align-items:center;flex-wrap:wrap}.need-row input:first-child{flex:2 1 310px;min-width:160px}.need-row .need-frequency{flex:0 1 160px;min-width:135px}.need-preview li{margin-bottom:7px}
 
 .need-preview .missing-frequency{color:#a33c18;background:#fff5e9;border-radius:6px;padding:5px 8px;margin-left:-8px;font-weight:600}
+
+.schedule-form-grid label{line-height:1.55}.schedule-help{color:#64748b;font-size:13px;line-height:1.7;margin:9px 0 18px}.schedule-summary{font-size:14px;line-height:1.8;background:#f2f8fc;border-radius:12px;padding:12px 14px;overflow-wrap:anywhere}
