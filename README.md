@@ -88,3 +88,11 @@ careplan-login-firebase/
 
 ## 연결 완료된 Firebase 웹 설정
 이 배포본에는 hansarang-cdbd2 웹 앱 설정이 반영되어 있습니다. GitHub Pages 저장소의 루트에 index.html, dashboard.html, css/, js/, assets/를 업로드하세요. Firebase Authentication > 설정 > 승인된 도메인에서 GitHub Pages 도메인(예: 사용자이름.github.io)을 확인하세요. Firebase Authentication의 이메일/비밀번호 공급자를 활성화하고, Firestore Database를 생성하여 firestore.rules를 게시하고 staff/{직원 UID} 문서에 active=true, name, role을 등록해야 로그인 후 업무 홈에 접근할 수 있습니다. 로그인 페이지 인증만으로 장기요양 개인정보 접근 권한이 보장되는 것은 아닙니다.
+
+
+## 달력 첫 화면
+로그인 및 Firestore 직원 승인 확인 후 dashboard.html에서 현재 월 달력을 표시합니다. 이전/다음 달, 오늘, 날짜 선택 기능을 제공합니다. 일정은 아직 저장되지 않으며 Firebase에 일정 데이터를 기록하지 않습니다.
+
+
+## 폴더 경로 변경 사항
+로그인 페이지는 루트 `index.html`, 로그인 후 달력 페이지는 `html/dashboard.html`입니다. 로그인 성공 시 `./html/dashboard.html`로 이동하며, 달력에서 로그아웃/미승인 시 `../index.html`로 이동합니다. 달력 페이지의 CSS/JS/로고 경로는 `../css/`, `../js/`, `../assets/`를 사용합니다.

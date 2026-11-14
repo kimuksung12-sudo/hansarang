@@ -168,3 +168,42 @@ h2 { margin: 13px 0 9px; font-size: 32px; letter-spacing: -.07em; font-weight: 8
 .dashboard-card p { margin: 0; color: #596a80; font-size: 14px; line-height: 1.8; }
 .dashboard-card .dashboard-caption { margin-top: 12px; color: #a06030; }
 @media (max-width:720px) { .dashboard-page { background: #f3f7fa; padding: 18px; } .dashboard-header .brand-name { white-space: normal; line-height: 1.3; font-size: 15px; } .dashboard-card { padding: 20px; } }
+
+/* 로그인 후 첫 화면: 월간 달력 */
+.dashboard-page {background:#f6f8fc}
+.dashboard-layout {max-width:1280px;margin:0 auto;padding:24px 28px 50px}
+.dashboard-header {margin-bottom:28px}
+.calendar-intro {display:flex;justify-content:space-between;align-items:center;gap:20px;margin:12px 0 26px}
+.calendar-intro h1 {font-size:clamp(26px,3vw,36px);margin:7px 0;color:#17243c}
+.calendar-intro p {color:#64748b;margin:0}
+.calendar-intro-tag {color:#926317;background:#fff4db;border-radius:999px;padding:10px 16px;font-weight:700;white-space:nowrap}
+.calendar-grid {display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:20px;align-items:start}
+.calendar-panel,.calendar-side-card {background:white;border:1px solid #e5eaf2;border-radius:22px;box-shadow:0 8px 32px rgba(22,37,65,.04)}
+.calendar-panel {padding:26px}
+.calendar-toolbar {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px}
+.calendar-eyebrow {font-size:11px;letter-spacing:1.5px;font-weight:800;color:#9a7a41}
+.calendar-toolbar h2 {font-size:25px;color:#17243c;margin:5px 0 0}
+.calendar-actions {display:flex;gap:6px;align-items:center}
+.calendar-actions button {background:#f5f7fb;color:#263955;border:1px solid #e7eaf0;border-radius:10px;min-width:36px;height:36px;cursor:pointer;font-size:20px}
+.calendar-actions #todayButton {font-size:13px;padding:0 13px}
+.weekday-row,.calendar-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.weekday-row {padding-bottom:12px;border-bottom:1px solid #edf0f4;text-align:center;font-size:13px;font-weight:700;color:#64748b}
+.weekday-row span:first-child {color:#d56d6d}.weekday-row span:last-child {color:#5c83cb}
+.calendar-days {gap:6px;padding-top:10px}
+.calendar-day {appearance:none;border:1px solid transparent;background:transparent;min-height:82px;border-radius:12px;padding:10px;display:flex;justify-content:flex-start;align-items:flex-start;color:#263955;cursor:pointer;font:inherit;font-weight:600}
+.calendar-day:hover {background:#f3f6fc}
+.calendar-day.is-outside {color:#bdc5d0}
+.calendar-day.is-today .day-number {background:#c8963c;color:white;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;margin:-5px}
+.calendar-day.is-selected {border-color:#d9ad63;background:#fff9ee}
+.calendar-day.is-sunday:not(.is-outside) {color:#ce6a6a}
+.calendar-day.is-saturday:not(.is-outside) {color:#5c83cb}
+.calendar-side {display:grid;gap:18px}
+.calendar-side-card {padding:24px}
+.calendar-side-card h2 {font-size:20px;margin:8px 0 20px;color:#17243c}
+.empty-schedule {border-top:1px solid #edf0f4;text-align:center;padding:34px 0 12px;color:#42536e}
+.empty-schedule span {display:block;font-size:32px;margin-bottom:13px}
+.empty-schedule strong {font-size:15px}
+.empty-schedule p,.notice-card p {font-size:13px;line-height:1.8;color:#7a879a}
+.notice-card h3 {margin:0 0 10px;color:#243752}
+@media(max-width:850px){.calendar-grid{grid-template-columns:1fr}.calendar-side{grid-template-columns:1fr 1fr}.calendar-day{min-height:65px}}
+@media(max-width:550px){.dashboard-layout{padding:16px 12px 32px}.calendar-intro-tag{display:none}.calendar-panel{padding:14px}.calendar-toolbar{align-items:flex-start}.calendar-toolbar h2{font-size:21px}.calendar-day{min-height:49px;padding:8px 5px}.calendar-days{gap:2px}.calendar-side{grid-template-columns:1fr}.calendar-side-card{padding:20px}}

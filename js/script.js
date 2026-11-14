@@ -135,7 +135,7 @@ form.addEventListener("submit", async (event) => {
     }
     saveRememberedUsername(); // 이메일만 선택적으로 기억합니다.
     passwordInput.value = "";
-    window.location.replace("./dashboard.html");
+    window.location.replace("./html/dashboard.html");
   } catch (error) {
     // 승인 조회 실패 등 중간 오류로 세션이 남지 않게 처리합니다.
     if (credentials && auth) {
@@ -156,7 +156,7 @@ if (!isConfigured) {
     if (!user || submitting) return;
     try {
       const staff = await getApprovedStaff(user);
-      if (staff) window.location.replace("./dashboard.html");
+      if (staff) window.location.replace("./html/dashboard.html");
       else await signOut(auth);
     } catch (_) {
       try { await signOut(auth); } catch (_) { /* 네트워크 오류 때는 로그인 화면 유지 */ }

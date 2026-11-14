@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>업무 홈 | 케어플랜 체크</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <script type="module" src="../js/dashboard.js"></script>
+</head>
+<body class="dashboard-page">
+  <main class="dashboard-layout">
+    <div class="dashboard-loading" id="checkingNotice" role="status">직원 계정과 접근 권한을 확인하고 있습니다...</div>
+    <div id="privateDashboard" hidden>
+      <header class="dashboard-header">
+        <div class="brand dashboard-brand">
+          <span class="brand-logo"><img src="../assets/hanmaeum-logo.png" width="56" height="56" alt="한마음 로고" /></span>
+          <span class="brand-name">한마음 <strong>케어플랜 체크</strong></span>
+        </div>
+        <button type="button" id="logoutButton" class="logout-button">로그아웃</button>
+      </header>
+      <section class="calendar-intro">
+        <div>
+          <span class="section-kicker">HANMAEUM WORKSPACE</span>
+          <h1 id="dashboardTitle">업무 일정</h1>
+          <p><strong id="staffName"></strong>님, 안녕하세요. <span id="staffEmail" class="account-email"></span></p>
+        </div>
+        <span class="calendar-intro-tag">한마음 주간보호센터</span>
+      </section>
+      <div class="calendar-grid">
+        <section class="calendar-panel" aria-label="월간 달력">
+          <div class="calendar-toolbar">
+            <div><span class="calendar-eyebrow">MONTHLY CALENDAR</span><h2 id="monthTitle"></h2></div>
+            <div class="calendar-actions">
+              <button type="button" id="prevMonth" aria-label="이전 달">‹</button>
+              <button type="button" id="todayButton">오늘</button>
+              <button type="button" id="nextMonth" aria-label="다음 달">›</button>
+            </div>
+          </div>
+          <div class="weekday-row" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+          <div id="calendarDays" class="calendar-days" role="grid" aria-label="달력 날짜 선택"></div>
+        </section>
+        <aside class="calendar-side">
+          <div class="calendar-side-card">
+            <span class="calendar-eyebrow">SELECTED DAY</span>
+            <h2 id="selectedDate"></h2>
+            <div class="empty-schedule"><span aria-hidden="true">📅</span><strong>등록된 일정이 없습니다.</strong><p>현재는 달력 화면을 먼저 구현했습니다.<br>일정 등록과 공유 기능은 다음 단계에서 추가할 수 있습니다.</p></div>
+          </div>
+          <div class="calendar-side-card notice-card">
+            <h3>업무 안내</h3>
+            <p>케어포 엑셀 업로드와 장기요양계획서 대조 기능은 추후 추가 예정입니다.</p>
+            <p>현재는 실제 어르신 개인정보를 업로드하지 마세요.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
