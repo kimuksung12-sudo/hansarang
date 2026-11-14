@@ -223,3 +223,6 @@ h2 { margin: 13px 0 9px; font-size: 32px; letter-spacing: -.07em; font-weight: 8
 .upload-status{font-size:13px;color:#58718a;line-height:1.65}
 .upload-review{background:#f2f9fc;border:1px solid #cee4f0;padding:17px;border-radius:13px;margin:16px 0}
 .upload-review p,.upload-review li{line-height:1.6;font-size:13px;color:#3e5b71}.upload-review ul{padding-left:21px}
+
+/* 엑셀에서 추출한 장기요양 필요내용 확인 */
+.need-preview{margin-top:16px;padding:14px 18px;border:1px solid #dbe8f0;border-radius:12px;background:#f8fbfc}.need-preview h3{font-size:15px;margin:0 0 10px}.need-preview ol{margin:0;padding-left:22px;max-height:260px;overflow:auto}.need-preview li{margin-bottom:6px;line-height:1.55;overflow-wrap:anywhere}

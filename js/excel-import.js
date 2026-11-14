@@ -67,24 +67,47 @@ function getPeriod(rows,XLSX){
   return ['',''];
 }
 function findNeeds(rows){
-  let start=-1;
-  for(let i=0;i<rows.length;i++){
-    if(rows[i].some(v=>/장기요양\s*필요\s*내용|장기요양\s*필요\s*서비스/.test(clean(v)))) {start=i;break;}
-  }
-  if(start<0)return [];
-  const blocked=/종합\s*의견|개인별\s*장기요양|작성\s*일자|계획서\s*작성|급여\s*제공\s*계획|총괄|서명|특이사항|확인자/;
-  const boilerplate=/^(장기요양\s*필요\s*(내용|서비스)|서비스\s*내용|급여\s*내용|항목|내용|제공\s*빈도|횟수|단위|비고|구분|번호|계|합계)$/;
-  const needs=[];
-  for(let i=start+1;i<Math.min(rows.length,start+65);i++){
-    const text=rows[i].map(clean).filter(Boolean);
-    if(text.some(t=>blocked.test(t)))break;
-    for(const val of text){
-      if(!val || boilerplate.test(val) || /^(\d+|\d+회|주\s*\d+회|일\s*\d+회)$/.test(val))continue;
-      if(/^(20\d\d[./-]|\d+등급|인정번호)/.test(val))continue;
-      if(val.length>=3 && val.length<=180 && !needs.includes(val))needs.push(val);
+  // 모든 '장기요양 필요내용' 열을 수집합니다.
+  // 주변 열(필요영역, 세부제공내용, 작성자명)은 추출하지 않습니다.
+  const header=/장기\s*요양\s*필요\s*(?:내용|서비스)/;
+  const unrelated=/필요\s*영역|세부\s*제공\s*내용|작성자\s*명|제공\s*방법|횟수|급여\s*종류|작성\s*일자/;
+  const nextSection=/종합\s*의견|개인별\s*장기\s*요양\s*이용\s*계획서|작성\s*일자|급여\s*제공\s*계획\s*작성|서명|수급자\s*확인/;
+  const ignore=/^(장기\s*요양\s*필요\s*(내용|서비스)|필요\s*영역|세부\s*제공\s*내용|내용|번호|구분|합계|계)$/;
+  const results=[];
+  const add = (cell) => {
+    const val=clean(cell).replace(/^[•·▪\-–]\s*/, '');
+    if(!val || ignore.test(val) || unrelated.test(val))return;
+    if(val.length<2 || val.length>300)return;
+    if(/^\d+(?:회|일|분|시간)?$/.test(val))return;
+    if(!results.includes(val))results.push(val);
+  };
+  let foundHeader=false;
+  for(let r=0;r<rows.length;r++){
+    const row=rows[r];
+    for(let c=0;c<row.length;c++){
+      if(!header.test(clean(row[c])))continue;
+      foundHeader=true;
+      // 병합셀을 고려하되, 열을 무작정 옆으로 이동하지 않습니다.
+      // '장기요양 필요내용'이 단독 열로 있는 경우 해당 열만 추출합니다.
+      // 머리글 행 자체의 '장기요양 필요내용: ...'은 별도로 처리합니다.
+      const inline=clean(row[c]).replace(/^.*?장기\s*요양\s*필요\s*(?:내용|서비스)\s*[:：-]?\s*/, '');
+      if(inline && inline!==clean(row[c])) add(inline);
+      let bottom=rows.length;
+      for(let j=r+1;j<rows.length;j++){
+        const rowJ=rows[j].map(clean);
+        if(rowJ.some(v=>nextSection.test(v))) {bottom=j;break;}
+        // 동일 열이 또 머리글이면 현재 표의 종료로 판단
+        if(j>r+1 && header.test(rowJ[c]||'')){bottom=j;break;}
+      }
+      for(let j=r+1;j<bottom;j++){
+        const target=clean(rows[j][c]);
+        if(target && !header.test(target)) add(target);
+      }
     }
   }
-  return needs.slice(0,50);
+  // 명확한 머리글이 없는 양식은 다른 열을 추측하여 가져오지 않습니다.
+  // 오추출 가능성을 줄이기 위해 사용자가 원본을 보고 직접 보완할 수 있습니다.
+  return {needs:results.slice(0,50), foundHeader, truncated:results.length>50};
 }
 function getOpinion(rows){
   const lines=rows.map(r=>r.map(clean).filter(Boolean).join(' '));
@@ -130,13 +153,16 @@ export async function extractCarePlan(file){
   let careGrade=gradeHit?(gradeHit[1]?`${gradeHit[1]}등급`:'인지지원등급'):'';
   if(!careGrade){const s=findText(rows,'장기요양등급|인정등급');const m=s.match(/[1-5]\s*등급|인지지원\s*등급/);if(m)careGrade=m[0].replace(/\s/g,'');}
   const [periodStart,periodEnd]=getPeriod(rows,XLSX);
-  const needs=findNeeds(rows);
+  const needResult=findNeeds(rows);
+  const needs=needResult.needs;
   const overallOpinion=getOpinion(rows);
   const weekly=extractWeekly(overallOpinion,rows);
   const extracted={personName,recognitionNumber,careGrade,periodStart,periodEnd,needs,overallOpinion,weeklyCount:weekly.weeklyCount,weeklyUnit:weekly.weeklyUnit};
   const warnings=[];
   for(const [key,label] of [['personName','성명'],['recognitionNumber','장기요양인정번호'],['careGrade','등급'],['periodStart','적용 시작일'],['periodEnd','적용 종료일']])if(!extracted[key])warnings.push(`${label}을(를) 확실히 찾지 못했습니다.`);
-  if(!needs.length)warnings.push('장기요양 필요내용을 확인하지 못했습니다.');
+  if(!needResult.foundHeader)warnings.push('장기요양 필요내용 열 제목을 찾지 못해 임의로 다른 열을 가져오지 않았습니다.');
+  if(!needs.length)warnings.push('장기요양 필요내용이 자동 추출되지 않았습니다. 엑셀 원문을 확인해 주세요.');
+  if(needResult.truncated)warnings.push('장기요양 필요내용이 50건을 넘어 일부가 제외되었습니다.');
   if(weekly.candidates.length!==1)warnings.push(weekly.candidates.length?'주당 횟수가 여러 번 발견되어 자동 선택하지 않았습니다.':'주당 횟수를 찾지 못했습니다.');
   return {extracted,warnings,candidates:weekly.candidates,sheetNames:wb.SheetNames};
 }
