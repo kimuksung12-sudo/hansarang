@@ -90,7 +90,7 @@ function getPeriod(rows,XLSX){
   // 찾을 수 없으면 계약기간으로 대체하지 않고 수동 확인을 요청합니다.
   return ['',''];
 }
-function findNeeds(rows){
+function findNeeds(rows, mergedRanges=[]){
   // 케어포 표의 장기요양 필요내용과 횟수를 같은 데이터 행에서 묶습니다.
   // '필요시'와 '수시'는 숫자 횟수가 아니지만 정식 횟수 값으로 보존합니다.
   const normalize = value => compact(value).replace(/[()（）]/g,'');
@@ -144,15 +144,21 @@ function findNeeds(rows){
       if(freqCol>=0){
         rawFreq=clean(row[freqCol]);
         frequency=parseFrequency(rawFreq);
-        // 헤더 바로 옆 병합셀로 값을 읽었을 때만 보조 확인합니다.
         if(!frequency && !rawFreq){
-          for(const c of [freqCol+1,freqCol-1]){
-            if(c<=needCol || c<0 || c>=row.length)continue;
-            const v=clean(row[c]);
-            const candidate=parseFrequency(v);
-            if(candidate){frequency=candidate;rawFreq=v;break;}
+          // XLS/XLSX의 실제 병합 영역 좌표를 사용합니다.
+          // '횟수' 셀의 병합 범위 안에 속한 모든 필요내용 행에 동일 값을 적용합니다.
+          // 단순히 윗줄 값을 내려 채우면 무관한 항목까지 잘못 복사되므로 금지합니다.
+          const merged=mergedRanges.find(m =>
+            m.s.r<=j && j<=m.e.r && m.s.c<=freqCol && freqCol<=m.e.c
+          );
+          if(merged){
+            const anchorRow=rows[merged.s.r]||[];
+            const anchorValue=clean(anchorRow[merged.s.c]);
+            const candidate=parseFrequency(anchorValue);
+            if(candidate){frequency=candidate;rawFreq=anchorValue;}
           }
         }
+        // 병합 정보로 확인되지 않은 빈 횟수는 자동 추정하지 않습니다.
       }
       const key=`${need}|${frequency}`;
       if(seen.has(key))continue;
@@ -198,10 +204,24 @@ export async function extractCarePlan(file){
   try{wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true,cellText:true,raw:false});}
   catch {throw new Error('엑셀 파일을 열지 못했습니다. 암호가 걸려 있거나 지원하지 않는 파일일 수 있습니다.');}
   const rows=[];
+  const mergedRanges=[];
   for(const name of wb.SheetNames){
     const ws=wb.Sheets[name];
-    const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+    const range=XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const offset=rows.length;
+    // blankrows=true 로 원본 엑셀의 실제 행 번호를 그대로 유지
+    // (병합 셀의 !merges 좌표와 행 인덱스를 일치시킵니다).
+    const data=XLSX.utils.sheet_to_json(ws,{
+      header:1,defval:'',raw:false,blankrows:true,
+      range:{s:{r:0,c:0},e:{r:range.e.r,c:range.e.c}}
+    });
     rows.push(...data.map(r=>r.map(v=>clean(v))));
+    for(const m of (ws['!merges']||[])){
+      mergedRanges.push({
+        s:{r:m.s.r+offset,c:m.s.c},
+        e:{r:m.e.r+offset,c:m.e.c}
+      });
+    }
   }
   if(!rows.length)throw new Error('엑셀에 읽을 수 있는 데이터가 없습니다.');
   const full=rows.flat().map(clean).filter(Boolean).join('\n');
@@ -215,7 +235,7 @@ export async function extractCarePlan(file){
   let careGrade=gradeHit?(gradeHit[1]?`${gradeHit[1]}등급`:'인지지원등급'):'';
   if(!careGrade){const s=findText(rows,'장기요양등급|인정등급');const m=s.match(/[1-5]\s*등급|인지지원\s*등급/);if(m)careGrade=m[0].replace(/\s/g,'');}
   const [periodStart,periodEnd]=getPeriod(rows,XLSX);
-  const needResult=findNeeds(rows);
+  const needResult=findNeeds(rows,mergedRanges);
   const needs=needResult.needs;
   const needDetails=needResult.needDetails;
   const overallOpinion=getOpinion(rows);
