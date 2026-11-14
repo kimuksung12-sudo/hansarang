@@ -54,16 +54,40 @@ function findText(rows, labels, {avoid=[]}={}){
   return '';
 }
 function getPeriod(rows,XLSX){
-  const allLines = rows.map(row=>row.map(clean).filter(Boolean).join(' | '));
-  for (let i=0;i<allLines.length;i++) {
-    if (!/적용\s*기간|계획\s*기간|제공\s*기간|적용\s*시작|계약\s*기간/.test(allLines[i]))continue;
-    const block=allLines.slice(i,Math.min(i+3,allLines.length)).join(' ');
-    const matches=[...block.matchAll(/20\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}/g)].map(m=>dateValue(m[0],XLSX));
-    if(matches.length>=2)return [matches[0],matches[1]];
-    const cells=rows.slice(i,i+3).flat();
-    const parsed=cells.map(c=>dateValue(c,XLSX)).filter(Boolean);
-    if(parsed.length>=2)return [parsed[0],parsed[1]];
+  // 계약기간이나 장기요양급여 계약기간은 추출 대상이 아닙니다.
+  // 오직 '장기요양급여 제공계획서 적용기간' 머리글에 연결된 날짜만 사용합니다.
+  const wanted = /장기요양급여제공계획서적용기간/;
+  const datePattern = /20\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}/g;
+  const readRange = value => {
+    const dates = [...clean(value).matchAll(datePattern)].map(m => dateValue(m[0],XLSX)).filter(Boolean);
+    if(dates.length === 2 && dates[0] <= dates[1]) return dates;
+    return null;
+  };
+  for(let rowIndex=0; rowIndex<rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    for(let col=0; col<row.length; col++) {
+      if(!wanted.test(compact(row[col]))) continue;
+      // 같은 셀에 적용기간이 적힌 양식
+      const inline = readRange(row[col]);
+      if(inline) return inline;
+      // 케어포 양식: 머리글 바로 아래 같은 열에 '시작일~종료일' 표기
+      for(let offset=1; offset<=3 && rowIndex+offset<rows.length; offset++) {
+        const candidateRow=rows[rowIndex+offset];
+        const candidate=clean(candidateRow[col]);
+        if(/계약기간|계약일|작성일|통보일/.test(compact(candidate))) break;
+        const matched=readRange(candidate);
+        if(matched) return matched;
+        // 날짜가 다른 두 셀로 쪼개진 경우, 동일 머리글 아래 인접 셀만 확인
+        if(offset===1 && candidate) {
+          const next=clean(candidateRow[col+1]);
+          const left=dateValue(candidate,XLSX);
+          const right=dateValue(next,XLSX);
+          if(left && right && left<=right) return [left,right];
+        }
+      }
+    }
   }
+  // 찾을 수 없으면 계약기간으로 대체하지 않고 수동 확인을 요청합니다.
   return ['',''];
 }
 function findNeeds(rows){
@@ -159,7 +183,7 @@ export async function extractCarePlan(file){
   const weekly=extractWeekly(overallOpinion,rows);
   const extracted={personName,recognitionNumber,careGrade,periodStart,periodEnd,needs,overallOpinion,weeklyCount:weekly.weeklyCount,weeklyUnit:weekly.weeklyUnit};
   const warnings=[];
-  for(const [key,label] of [['personName','성명'],['recognitionNumber','장기요양인정번호'],['careGrade','등급'],['periodStart','적용 시작일'],['periodEnd','적용 종료일']])if(!extracted[key])warnings.push(`${label}을(를) 확실히 찾지 못했습니다.`);
+  for(const [key,label] of [['personName','성명'],['recognitionNumber','장기요양인정번호'],['careGrade','등급'],['periodStart','제공계획서 적용 시작일'],['periodEnd','제공계획서 적용 종료일']])if(!extracted[key])warnings.push(`${label}을(를) 확실히 찾지 못했습니다.`);
   if(!needResult.foundHeader)warnings.push('장기요양 필요내용 열 제목을 찾지 못해 임의로 다른 열을 가져오지 않았습니다.');
   if(!needs.length)warnings.push('장기요양 필요내용이 자동 추출되지 않았습니다. 엑셀 원문을 확인해 주세요.');
   if(needResult.truncated)warnings.push('장기요양 필요내용이 50건을 넘어 일부가 제외되었습니다.');
