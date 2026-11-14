@@ -29,13 +29,13 @@ $("planExcelFile").addEventListener("change", async event => {
     const result=await extractCarePlan(file);
     lastImported=result;
     const d=result.extracted;
-    $("uploadReviewText").textContent=`${file.name} · ${result.sheetNames.length}개 시트 · 성명: ${d.personName||'미확인'} · 인정번호: ${d.recognitionNumber||'미확인'} · 등급: ${d.careGrade||'미확인'} · 적용기간: ${d.periodStart||'?'} ~ ${d.periodEnd||'?'} · 필요내용 ${d.needs.length}건 · 주당 횟수: ${d.weeklyCount===null?'검토 필요':d.weeklyCount+d.weeklyUnit}`;
+    $("uploadReviewText").textContent=`${file.name} · ${result.sheetNames.length}개 시트 · 성명: ${d.personName||'미확인'} · 인정번호: ${d.recognitionNumber||'미확인'} · 등급: ${d.careGrade||'미확인'} · 적용기간: ${d.periodStart||'?'} ~ ${d.periodEnd||'?'} · 필요내용 ${d.needs.length}건 (횟수 미확인 ${d.needDetails.filter(x=>!x.frequency).length}건) · 주당 횟수: ${d.weeklyCount===null?'검토 필요':d.weeklyCount+d.weeklyUnit}`;
     const preview=$("importedNeedPreview");
     preview.replaceChildren();
     if(d.needs.length===0) {
       const li=document.createElement("li");li.textContent="자동 추출 결과가 없습니다.";preview.append(li);
     } else {
-      d.needs.forEach(value=>{const li=document.createElement("li");li.textContent=value;preview.append(li);});
+      d.needDetails.forEach(item=>{const li=document.createElement("li");li.textContent=`${item.text} — ${item.frequency || "⚠ 횟수 미확인"}`;if(!item.frequency)li.className="missing-frequency";preview.append(li);});
     }
     const warnings=$("uploadWarnings"); warnings.replaceChildren();
     for(const warning of result.warnings){const li=document.createElement('li');li.textContent=warning;warnings.append(li);}

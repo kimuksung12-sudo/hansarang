@@ -229,3 +229,5 @@ h2 { margin: 13px 0 9px; font-size: 32px; letter-spacing: -.07em; font-weight: 8
 
 /* 장기요양 필요내용별 제공 횟수 */
 .need-row {display:flex;gap:10px;align-items:center;flex-wrap:wrap}.need-row input:first-child{flex:2 1 310px;min-width:160px}.need-row .need-frequency{flex:0 1 160px;min-width:135px}.need-preview li{margin-bottom:7px}
+
+.need-preview .missing-frequency{color:#a33c18;background:#fff5e9;border-radius:6px;padding:5px 8px;margin-left:-8px;font-weight:600}

@@ -91,47 +91,85 @@ function getPeriod(rows,XLSX){
   return ['',''];
 }
 function findNeeds(rows){
-  // 급여제공계획내용 표의 '장기요양 필요내용'과 '횟수' 열을 같은 행 기준으로 추출합니다.
-  // '장기요양 필요영역', '세부제공내용', '작성자'는 사용하지 않습니다.
-  const normalized = value => compact(value);
-  const needHeader = value => normalized(value)==='장기요양필요내용';
-  const freqHeader = value => normalized(value)==='횟수';
-  const otherHeader = value => /^(장기요양필요영역|장기요양세부목표|세부제공내용|작성자|시간\(분\)|시간|내용)$/.test(normalized(value));
-  const section = value => /종합의견|개인별장기요양이용계획서|급여제공계획작성|장기요양급여제공계획서적용기간|급여제공계획작성/.test(normalized(value));
-  const itemPattern = /^(일|주|월|년)\s*(\d{1,3})\s*회(?:\s*이상)?$/;
-  const parseFreq = value => {
-    const v=clean(value).replace(/\s+/g,' ');
-    const m=v.match(itemPattern);
-    if (m) return `${m[1]} ${m[2]}회`;
-    // "일 1회"와 "일1회" 뿐 아니라 "주 2회" 형태를 지원.
-    if (/^(일|주|월|년)\s*\d+\s*회/.test(v)) return v;
+  // 케어포 표의 장기요양 필요내용과 횟수를 같은 데이터 행에서 묶습니다.
+  // '필요시'와 '수시'는 숫자 횟수가 아니지만 정식 횟수 값으로 보존합니다.
+  const normalize = value => compact(value).replace(/[()（）]/g,'');
+  const needHeader = value => normalize(value) === '장기요양필요내용';
+  const freqHeader = value => normalize(value) === '횟수';
+  const skippedHeader = value => /^(장기요양필요영역|장기요양세부목표|세부제공내용|작성자|작성자명|시간분|시간|내용|구분)$/.test(normalize(value));
+  const section = value => /^(종합의견|개인별장기요양이용계획서|장기요양급여제공계획서적용기간|급여제공계획작성|확인사항)$/.test(normalize(value));
+  function parseFrequency(value){
+    const text=clean(value).replace(/[\n\r]/g,' ').replace(/\s+/g,' ').trim();
+    if(!text)return '';
+    // 빈도를 뜻하는 조건부 표기. 이 값을 빈칸으로 처리하면 안 됩니다.
+    if(/^(필요\s*시|수\s*시|상\s*시|매\s*회|요청\s*시|상황\s*에\s*따라|수시로|필요할\s*때)(?:\s*제공)?$/.test(text)){
+      return text.replace(/\s+/g,'').replace('수시로','수시').replace('필요할때','필요시');
+    }
+    // '일 1회', '주 2회', '월 1회', '일 5회' 등 숫자 빈도.
+    const numeric=text.match(/^(일|주|월|년|매일|매주|매월)\s*(\d{1,3})\s*회(?:\s*(?:이상|정도))?$/);
+    if(numeric)return `${numeric[1]} ${Number(numeric[2])}회`;
+    // 한 시트의 표기 변종: '1일 1회', '1주 2회'
+    const duration=text.match(/^(\d{1,2})\s*(일|주|개월|월)\s*(\d{1,3})\s*회$/);
+    if(duration)return `${duration[1]}${duration[2]} ${Number(duration[3])}회`;
     return '';
-  };
-  const details = [];
-  let foundHeader = false;
+  }
+  const details=[];
   const seen=new Set();
+  let foundHeader=false,foundFrequencyColumn=false,rawUnrecognized=[];
+  // 각 시트의 표를 순차적으로 살피고 '횟수'라는 열이 헤더와 같은 줄에 있는지 확인합니다.
   for(let r=0;r<rows.length;r++){
-    const cols=rows[r], needCol=cols.findIndex(needHeader);
-    if(needCol<0) continue;
+    const header=rows[r].map(clean);
+    const needCol=header.findIndex(needHeader);
+    if(needCol===-1)continue;
     foundHeader=true;
-    // 같은 표 머리글 줄에서 '횟수' 열 위치를 정확히 찾습니다.
-    const freqCol=cols.findIndex(freqHeader);
-    for(let j=r+1;j<rows.length;j++){
-      const row=rows[j].map(clean);
-      if(row.some(section))break;
-      if(j>r+1 && row.some(needHeader))break;
-      const need=clean(row[needCol]);
-      if(!need || needHeader(need) || otherHeader(need))continue;
-      // 열 위치가 같은 행에 있어야 필요내용-횟수를 짝지을 수 있습니다.
-      const frequency = freqCol >= 0 ? parseFreq(row[freqCol]) : '';
-      const key=need+'|'+frequency;
-      if(!seen.has(key) && need.length<=300 && details.length<50){
-        details.push({text:need,frequency});
-        seen.add(key);
+    let freqCol=header.findIndex(freqHeader);
+    // 케어포 병합 셀에서 헤더가 위/아래 한 줄 어긋나 있을 수 있음.
+    if(freqCol<0){
+      for(const shift of [-1,1]){
+        const candidate=rows[r+shift];
+        if(!candidate)continue;
+        const col=candidate.findIndex(freqHeader);
+        if(col>needCol && col<=needCol+6){freqCol=col;break;}
       }
     }
+    if(freqCol>=0)foundFrequencyColumn=true;
+    for(let j=r+1;j<rows.length;j++){
+      const row=rows[j].map(clean);
+      if(row.some(section) || row.some(needHeader))break;
+      const need=clean(row[needCol]);
+      if(!need || skippedHeader(need) || needHeader(need))continue;
+      if(need.length>300)continue;
+      let frequency='';
+      let rawFreq='';
+      if(freqCol>=0){
+        rawFreq=clean(row[freqCol]);
+        frequency=parseFrequency(rawFreq);
+        // 헤더 바로 옆 병합셀로 값을 읽었을 때만 보조 확인합니다.
+        if(!frequency && !rawFreq){
+          for(const c of [freqCol+1,freqCol-1]){
+            if(c<=needCol || c<0 || c>=row.length)continue;
+            const v=clean(row[c]);
+            const candidate=parseFrequency(v);
+            if(candidate){frequency=candidate;rawFreq=v;break;}
+          }
+        }
+      }
+      const key=`${need}|${frequency}`;
+      if(seen.has(key))continue;
+      seen.add(key);
+      details.push({text:need,frequency});
+      if(rawFreq && !frequency)rawUnrecognized.push({need,rawFreq});
+    }
   }
-  return {needs:details.map(x=>x.text), needDetails:details, foundHeader, foundFrequencyColumn:rows.some(r=>r.some(freqHeader)), truncated:details.length>=50};
+  const missing=details.filter(item=>!item.frequency);
+  return {
+    needs:details.slice(0,50).map(item=>item.text),
+    needDetails:details.slice(0,50),
+    foundHeader,foundFrequencyColumn,
+    missing:missing.slice(0,50),
+    rawUnrecognized:rawUnrecognized.slice(0,50),
+    truncated:details.length>50
+  };
 }
 function getOpinion(rows){
   const lines=rows.map(r=>r.map(clean).filter(Boolean).join(' '));
@@ -188,7 +226,12 @@ export async function extractCarePlan(file){
   if(!needResult.foundHeader)warnings.push('장기요양 필요내용 열 제목을 찾지 못해 임의로 다른 열을 가져오지 않았습니다.');
   if(!needs.length)warnings.push('장기요양 필요내용이 자동 추출되지 않았습니다. 엑셀 원문을 확인해 주세요.');
   if(!needResult.foundFrequencyColumn)warnings.push('횟수 열을 찾지 못했습니다. 항목별 횟수를 직접 확인해 주세요.');
-  if(needDetails.some(item=>!item.frequency))warnings.push('횟수를 확인하지 못한 항목이 있습니다. 저장 전 원본과 대조해 주세요.');
+  if(needResult.missing.length){
+    warnings.push(`횟수 미확인 ${needResult.missing.length}건: ${needResult.missing.map(x=>x.text).join(' / ')}. 원본의 횟수 열을 확인해 주세요.`);
+  }
+  if(needResult.rawUnrecognized.length){
+    warnings.push(`횟수 표기 검토: ${needResult.rawUnrecognized.map(x=>`${x.need} → ${x.rawFreq}`).join(' / ')}`);
+  }
   if(needResult.truncated)warnings.push('장기요양 필요내용이 50건을 넘어 일부가 제외되었습니다.');
   if(weekly.candidates.length!==1)warnings.push(weekly.candidates.length?'주당 횟수가 여러 번 발견되어 자동 선택하지 않았습니다.':'주당 횟수를 찾지 못했습니다.');
   return {extracted,warnings,candidates:weekly.candidates,sheetNames:wb.SheetNames};
