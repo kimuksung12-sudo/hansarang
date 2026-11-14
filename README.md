@@ -96,3 +96,13 @@ careplan-login-firebase/
 
 ## 폴더 경로 변경 사항
 로그인 페이지는 루트 `index.html`, 로그인 후 달력 페이지는 `html/dashboard.html`입니다. 로그인 성공 시 `./html/dashboard.html`로 이동하며, 달력에서 로그아웃/미승인 시 `../index.html`로 이동합니다. 달력 페이지의 CSS/JS/로고 경로는 `../css/`, `../js/`, `../assets/`를 사용합니다.
+
+
+## 계획서 보관함 추가
+- 로그인 후 html/dashboard.html의 좌측 메뉴에서 html/plans.html로 이동합니다.
+- Firebase Firestore `carePlans` 컬렉션에 계획서가 저장됩니다.
+- 필수: Firebase 콘솔 > Firestore > 규칙에 동봉된 firestore.rules 전체를 붙여넣고 게시하세요. GitHub에 파일을 올리는 것만으로 규칙이 적용되지 않습니다.
+- 현재는 승인된 admin 직원만 계획서 열람/작성/수정/삭제가 가능합니다.
+- 동일 대상자의 기간별 계획서는 개별 문서로 저장됩니다.
+- 현재 제공 기능은 수동 입력/검색/수정/삭제입니다. 업로드된 .xls 자동 추출은 구현하지 않았습니다.
+- 운영 전 개인정보 처리 및 보안 점검, 역할 권한, 접근 기록, 삭제·백업 정책을 검토하세요.

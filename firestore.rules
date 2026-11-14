@@ -1,16 +1,42 @@
-// 현재 단계에서는 직원 승인 명단 이외의 모든 Firestore 데이터 접근을 거부합니다.
-// Firebase 콘솔 → Firestore Database → 규칙 탭에 붙여 넣고 '게시'하세요.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 본인 UID의 승인 여부만 조회할 수 있고, 클라이언트 변경은 불가능합니다.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role == 'admin';
+    }
     match /staff/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
       allow list, create, update, delete: if false;
     }
-    // 향후 엑셀/어르신 자료는 별도의 권한 설계가 완료되기 전까지 차단합니다.
-    match /{document=**} {
-      allow read, write: if false;
+    match /carePlans/{planId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','weeklyCount','weeklyUnit','overallOpinion','createdBy','updatedBy','createdAt','updatedAt'])
+        && request.resource.data.keys().hasOnly(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','weeklyCount','weeklyUnit','overallOpinion','createdBy','updatedBy','createdAt','updatedAt'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.personName is string
+        && request.resource.data.recognitionNumber is string
+        && request.resource.data.careGrade is string
+        && request.resource.data.periodStart is string
+        && request.resource.data.periodEnd is string
+        && request.resource.data.needs is list
+        && request.resource.data.needs.size() <= 50
+        && (request.resource.data.weeklyCount == null || (request.resource.data.weeklyCount is int && request.resource.data.weeklyCount >= 0 && request.resource.data.weeklyCount <= 99))
+        && request.resource.data.weeklyUnit is string
+        && request.resource.data.overallOpinion is string;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['personName','recognitionNumber','careGrade','periodStart','periodEnd','needs','weeklyCount','weeklyUnit','overallOpinion','updatedBy','updatedAt'])
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.personName is string
+        && request.resource.data.recognitionNumber is string
+        && request.resource.data.needs is list
+        && (request.resource.data.weeklyCount == null || (request.resource.data.weeklyCount is int && request.resource.data.weeklyCount >= 0 && request.resource.data.weeklyCount <= 99));
+      allow delete: if isAdmin();
     }
+    match /{document=**} { allow read, write: if false; }
   }
 }

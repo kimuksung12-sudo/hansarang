@@ -10,7 +10,8 @@ export const isConfigured = ["apiKey", "authDomain", "projectId", "appId"].every
 
 const app = isConfigured ? initializeApp(firebaseConfig) : null;
 export const auth = app ? getAuth(app) : null;
-const database = app ? getFirestore(app) : null;
+export const db = app ? getFirestore(app) : null;
+const database = db;
 
 // 관리자 승인 여부는 Firestore staff/{UID} 문서로 확인합니다.
 // 허용 여부는 화면뿐 아니라 Firestore/Storage 보안 규칙으로도 강제해야 합니다.
