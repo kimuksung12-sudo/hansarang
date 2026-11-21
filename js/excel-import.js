@@ -195,32 +195,36 @@ function getOpinion(rows){
 export function extractSchedulesFromOpinion(opinion){
   const text=clean(opinion).replace(/\s+/g,' ');
   const anchor=/개인별\s*장기\s*요양\s*이용\s*계획서/.exec(text);
-  if(!anchor) return {
-    recommendedSchedule:'',weekdaySchedule:'',saturdaySchedule:'',
-    weeklyCount:null,weeklyUnit:'회',warnings:['개인별장기요양이용계획서 문구를 찾지 못했습니다.']
+  const empty={
+    recommendedSchedule:'', weekdaySchedule:'', saturdaySchedule:'',
+    weeklyCount:null, weeklyUnit:'회'
   };
-  // 문장의 시작점을 표제어 이후로 한정해 다른 종합의견의 괄호가 섞이는 것을 방지합니다.
+  if(!anchor) return {...empty, warnings:['개인별장기요양이용계획서 문구를 찾지 못했습니다.']};
+
   const scoped=text.slice(anchor.index+anchor[0].length,anchor.index+anchor[0].length+1400);
-  const found=[];
-  const pattern=/[（(]\s*(주\s*\d{1,2}\s*회[^()（）]{0,90}?)\s*[)）]\s*(\d{1,2}\s*시간\s*미만)?/g;
-  for(const match of scoped.matchAll(pattern)){
-    const inside=match[1].replace(/\s+/g,' ').trim();
-    if(!/주\s*\d{1,2}\s*회/.test(inside))continue;
-    const suffix=(match[2]||'').replace(/\s+/g,' ').trim();
-    found.push(`${inside}${suffix ? ' '+suffix : ''}`);
-  }
   const warnings=[];
-  if(!found.length)warnings.push('종합의견에서 주당 횟수가 포함된 괄호를 찾지 못했습니다.');
-  if(found.length===1)warnings.push('평일 적용 수가를 확인하지 못했습니다.');
-  if(found.length>3)warnings.push('주당 횟수가 포함된 괄호가 4개 이상입니다. 첫 3개를 추출했으니 원문을 확인해 주세요.');
-  // 3번째가 없으면 토요일 수가를 가정하지 않습니다.
-  const count=found[0]?.match(/주\s*(\d{1,2})\s*회/);
+  // 괄호 유무와 무관하게 '주 N회 + 시간 구간'을 찾습니다.
+  // '8시간이상 10시간 미만'과 '(주 5회 8시간 이상) 10시간 미만' 모두 인식.
+  const pattern=/주\s*(\d{1,2})\s*회\s*(\d{1,2})\s*시간\s*이상/g;
+  const hits=[...scoped.matchAll(pattern)].map(m=>{
+    const start=m.index;
+    const after=scoped.slice(start+m[0].length,start+m[0].length+45);
+    const upper=after.match(/^[\s)）]*(\d{1,2})\s*시간\s*미만/);
+    const value=`주 ${Number(m[1])}회 ${Number(m[2])}시간 이상${upper?' '+Number(upper[1])+'시간 미만':''}`;
+    return {index:start,value,count:Number(m[1])};
+  });
+  // 시작 기준을 '개인별 ... 계획서'로 잡아 다른 괄호 수치가 섞이지 않게 합니다.
+  if(!hits.length)warnings.push('권장 시간과 평일 수가의 주당 횟수·시간을 추출하지 못했습니다.');
+  if(hits.length===1)warnings.push('평일 적용 수가가 확인되지 않았습니다.');
+  if(hits.length>3)warnings.push('이용시간 표현이 4개 이상 발견되어 첫 3개만 추출했습니다. 확인해 주세요.');
+  if(hits.some(h=>!h.value.includes('미만')))warnings.push('시간 상한(몇 시간 미만)을 확인하지 못한 항목이 있습니다.');
+  // 토요일 수가가 없는 문장은 공란 유지.
   return {
-    recommendedSchedule:found[0]||'',
-    weekdaySchedule:found[1]||'',
-    saturdaySchedule:found[2]||'',
-    weeklyCount:count?Number(count[1]):null,
-    weeklyUnit:'회',
+    ...empty,
+    recommendedSchedule:hits[0]?.value||'',
+    weekdaySchedule:hits[1]?.value||'',
+    saturdaySchedule:hits[2]?.value||'',
+    weeklyCount:hits[0]?.count??null,
     warnings
   };
 }
